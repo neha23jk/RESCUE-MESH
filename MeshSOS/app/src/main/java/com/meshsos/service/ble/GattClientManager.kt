@@ -109,22 +109,19 @@ class GattClientManager(
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 try {
-                    // Parse minimal JSON
-                    val json = String(value, Charsets.UTF_8)
-                    Log.d(TAG, "Received packet JSON (${value.size} bytes): $json")
+                    Log.d(TAG, "Received packet data (${value.size} bytes)")
                     
-                    val minimalPacket = MinimalSosPacket.fromJson(json)
-                    if (minimalPacket != null) {
-                        // Convert to full packet
-                        val sosPacket = minimalPacket.toSosPacket(
-                            deviceId = gatt.device.address,
-                            timestamp = System.currentTimeMillis()
-                        )
-                        
+                    // Try binary format first, fall back to JSON for backward compatibility
+                    val sosPacket = BinaryPacketCodec.decodeWithFallback(
+                        data = value,
+                        deviceId = gatt.device.address
+                    )
+                    
+                    if (sosPacket != null) {
                         Log.d(TAG, "✅ Successfully retrieved full packet: ${sosPacket.sosId}")
                         onPacketReceived(sosPacket, gatt.device.address)
                     } else {
-                        Log.e(TAG, "Failed to parse minimal packet JSON")
+                        Log.e(TAG, "Failed to decode packet (tried binary + JSON fallback)")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error processing packet data", e)

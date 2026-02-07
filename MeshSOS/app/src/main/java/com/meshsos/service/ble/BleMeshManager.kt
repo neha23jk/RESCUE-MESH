@@ -61,9 +61,17 @@ class BleMeshManager(
     private val _nearbyDevices = MutableStateFlow<Set<String>>(emptySet())
     val nearbyDevices: StateFlow<Set<String>> = _nearbyDevices
     
-    // Deduplication cache for received beacons
-    private val recentBeacons = ConcurrentHashMap<UUID, Long>()
+    // Bloom filter for memory-efficient deduplication
+    private val bloomFilter = BloomFilter(expectedItems = 10_000, falsePositiveRate = 0.01)
+    
+    // LRU backup cache for recent beacons (prevents false-positive rejections)
+    private val recentBeaconsLru = object : LinkedHashMap<UUID, Long>(100, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<UUID, Long>): Boolean {
+            return size > 100
+        }
+    }
     private val BEACON_CACHE_DURATION_MS = 60_000L // 1 minute
+    private val BLOOM_FILTER_RESET_INTERVAL_MS = 60 * 60 * 1000L // 1 hour
     
     // Currently advertising beacons
     private val activeAdvertisements = ConcurrentHashMap<UUID, AdvertisingSetCallback>()
@@ -286,14 +294,11 @@ class BleMeshManager(
                 _nearbyDevices.value = nearbyDeviceTimestamps.keys.toSet()
                 
                 // Deduplication - check if we've seen this recently
-                val now = System.currentTimeMillis()
-                val lastSeen = recentBeacons[beacon.sosId]
-                
-                if (lastSeen != null && now - lastSeen < BEACON_CACHE_DURATION_MS) {
+                if (isInDeduplicationCache(beacon.sosId)) {
                     return // Already processed recently
                 }
                 
-                recentBeacons[beacon.sosId] = now
+                addToDeduplicationCache(beacon.sosId)
                 
                 // Clean old entries
                 cleanupBeaconCache()
@@ -388,26 +393,49 @@ class BleMeshManager(
     fun isBluetoothEnabled(): Boolean = bluetoothAdapter?.isEnabled == true
     
     /**
-     * Clean up old entries from beacon cache
+     * Clean up old entries from beacon cache and reset bloom filter if needed
      */
     private fun cleanupBeaconCache() {
         val now = System.currentTimeMillis()
-        recentBeacons.entries.removeIf { now - it.value > BEACON_CACHE_DURATION_MS }
+        
+        // Clean LRU cache
+        synchronized(recentBeaconsLru) {
+            recentBeaconsLru.entries.removeIf { now - it.value > BEACON_CACHE_DURATION_MS }
+        }
+        
+        // Reset bloom filter if it's been too long
+        if (bloomFilter.shouldReset(BLOOM_FILTER_RESET_INTERVAL_MS)) {
+            Log.d(TAG, "Resetting bloom filter (saturation: ${(bloomFilter.saturationRatio() * 100).toInt()}%)")
+            bloomFilter.reset()
+        }
     }
     
     /**
-     * Add beacon ID to deduplication cache
+     * Add beacon ID to deduplication cache (Bloom filter + LRU backup)
      */
     fun addToDeduplicationCache(sosId: UUID) {
-        recentBeacons[sosId] = System.currentTimeMillis()
+        bloomFilter.add(sosId)
+        synchronized(recentBeaconsLru) {
+            recentBeaconsLru[sosId] = System.currentTimeMillis()
+        }
+        Log.d(TAG, "Added to dedup cache: $sosId (bloom items: ${bloomFilter.approximateCount()})")
     }
     
     /**
      * Check if beacon is in deduplication cache
+     * Uses LRU cache first (no false positives), then Bloom filter
      */
     fun isInDeduplicationCache(sosId: UUID): Boolean {
-        val lastSeen = recentBeacons[sosId] ?: return false
-        return System.currentTimeMillis() - lastSeen < BEACON_CACHE_DURATION_MS
+        // Check LRU cache first (recent items, no false positives)
+        synchronized(recentBeaconsLru) {
+            val lastSeen = recentBeaconsLru[sosId]
+            if (lastSeen != null && System.currentTimeMillis() - lastSeen < BEACON_CACHE_DURATION_MS) {
+                return true
+            }
+        }
+        
+        // Check Bloom filter (may have false positives, but that's acceptable)
+        return bloomFilter.mightContain(sosId)
     }
     
     /**

@@ -135,13 +135,12 @@ fun HomeScreen(
         }
     }
     
-    // Emergency type selection dialog
     if (showEmergencyTypeDialog) {
         EmergencyTypeDialog(
             onDismiss = { showEmergencyTypeDialog = false },
-            onSelect = { type ->
+            onSelect = { type, message ->
                 showEmergencyTypeDialog = false
-                viewModel.sendSos(type)
+                viewModel.sendSos(type, message)
             }
         )
     }
@@ -406,61 +405,121 @@ fun QuickActionsRow(
 @Composable
 fun EmergencyTypeDialog(
     onDismiss: () -> Unit,
-    onSelect: (EmergencyType) -> Unit
+    onSelect: (EmergencyType, String?) -> Unit
 ) {
+    var customMessage by remember { mutableStateOf("") }
+    var selectedType by remember { mutableStateOf<EmergencyType?>(null) }
+    
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Surface,
         title = {
             Text(
-                "Select Emergency Type",
+                if (selectedType == null) "Select Emergency Type" else "Add Message (Optional)",
                 color = TextPrimary
             )
         },
         text = {
             Column {
-                EmergencyType.entries.forEach { type ->
-                    val (icon, color) = when (type) {
-                        EmergencyType.MEDICAL -> Pair(Icons.Default.LocalHospital, EmergencyMedical)
-                        EmergencyType.FIRE -> Pair(Icons.Default.LocalFireDepartment, EmergencyFire)
-                        EmergencyType.FLOOD -> Pair(Icons.Default.Water, EmergencyFlood)
-                        EmergencyType.EARTHQUAKE -> Pair(Icons.Default.Landscape, EmergencyEarthquake)
-                        EmergencyType.GENERAL -> Pair(Icons.Default.Warning, EmergencyGeneral)
-                    }
-                    
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clickable { onSelect(type) },
-                        shape = RoundedCornerShape(8.dp),
-                        color = color.copy(alpha = 0.1f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                if (selectedType == null) {
+                    // Step 1: Select emergency type
+                    EmergencyType.entries.forEach { type ->
+                        val (icon, color) = when (type) {
+                            EmergencyType.MEDICAL -> Pair(Icons.Default.LocalHospital, EmergencyMedical)
+                            EmergencyType.FIRE -> Pair(Icons.Default.LocalFireDepartment, EmergencyFire)
+                            EmergencyType.FLOOD -> Pair(Icons.Default.Water, EmergencyFlood)
+                            EmergencyType.EARTHQUAKE -> Pair(Icons.Default.Landscape, EmergencyEarthquake)
+                            EmergencyType.GENERAL -> Pair(Icons.Default.Warning, EmergencyGeneral)
+                        }
+                        
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable { selectedType = type },
+                            shape = RoundedCornerShape(8.dp),
+                            color = color.copy(alpha = 0.1f)
                         ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = type.displayName,
-                                tint = color,
-                                modifier = Modifier.size(32.dp)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Text(
-                                text = type.displayName,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextPrimary
-                            )
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = type.displayName,
+                                    tint = color,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = type.displayName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = TextPrimary
+                                )
+                            }
                         }
                     }
+                } else {
+                    // Step 2: Add optional message
+                    Text(
+                        "Emergency: ${selectedType!!.displayName}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Primary,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    
+                    OutlinedTextField(
+                        value = customMessage,
+                        onValueChange = { if (it.length <= 255) customMessage = it },
+                        label = { Text("Custom message") },
+                        placeholder = { Text("e.g., Trapped on 3rd floor, need medical help") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Primary,
+                            unfocusedBorderColor = TextSecondary,
+                            focusedLabelColor = Primary,
+                            unfocusedLabelColor = TextSecondary,
+                            cursorColor = Primary,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        )
+                    )
+                    
+                    Text(
+                        "${customMessage.length}/255",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        textAlign = TextAlign.End
+                    )
                 }
             }
         },
-        confirmButton = {},
+        confirmButton = {
+            if (selectedType != null) {
+                Button(
+                    onClick = { 
+                        onSelect(selectedType!!, customMessage.ifBlank { null })
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
+                    Text("Send SOS", color = Color.White)
+                }
+            }
+        },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = TextSecondary)
+            if (selectedType != null) {
+                TextButton(onClick = { selectedType = null }) {
+                    Text("Back", color = TextSecondary)
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel", color = TextSecondary)
+                }
             }
         }
     )

@@ -26,6 +26,7 @@ import com.meshsos.data.model.SosPacket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import java.util.UUID
 
 /**
@@ -80,6 +81,9 @@ class BleMeshService : Service() {
     private var hasInternet = false
     private var nodeRole = NodeRole.USER
     
+    // Track beacons being processed to prevent duplicates
+    private val processingBeacons = java.util.concurrent.ConcurrentHashMap.newKeySet<UUID>()
+    
     // ============ Service Lifecycle ============
     
     override fun onCreate() {
@@ -105,14 +109,14 @@ class BleMeshService : Service() {
             ACTION_SEND_SOS -> {
                 // Broadcast the latest own SOS packet via BLE
                 serviceScope.launch {
-                    app.sosRepository.getOwnPackets().collect { packets ->
-                        val latestPacket = packets.firstOrNull()
-                        if (latestPacket != null) {
-                            Log.d(TAG, "Broadcasting SOS via BLE: ${latestPacket.sosId}")
-                            bleMeshManager.addToDeduplicationCache(latestPacket.sosId)
-                            gattServer.addPacket(latestPacket)
-                            bleMeshManager.advertiseBeacon(latestPacket, hasInternet, nodeRole == NodeRole.RESPONDER)
-                        }
+                    val packets = app.sosRepository.getOwnPackets()
+                    // Use first() to get a single emission instead of collect which continues
+                    val latestPacket = packets.first().firstOrNull()
+                    if (latestPacket != null) {
+                        Log.d(TAG, "Broadcasting SOS via BLE: ${latestPacket.sosId}")
+                        bleMeshManager.addToDeduplicationCache(latestPacket.sosId)
+                        gattServer.addPacket(latestPacket)
+                        bleMeshManager.advertiseBeacon(latestPacket, hasInternet, nodeRole == NodeRole.RESPONDER)
                     }
                 }
             }
@@ -221,47 +225,64 @@ class BleMeshService : Service() {
         serviceScope.launch {
             Log.d(TAG, "Processing beacon: ${beacon.sosId}")
             
-            // Check if already in local DB
-            if (app.sosRepository.exists(beacon.sosId)) {
-                Log.d(TAG, "Beacon already in database, ignoring")
+            // Prevent duplicate processing of the same beacon
+            if (!processingBeacons.add(beacon.sosId)) {
+                Log.d(TAG, "Beacon ${beacon.sosId} is already being processed, skipping")
                 return@launch
             }
             
-            // Check TTL
-            if (beacon.ttl <= 0) {
-                Log.d(TAG, "Beacon TTL expired, not relaying")
-                return@launch
-            }
-            
-            // TODO: Connect via GATT to fetch full packet
-            // For now, create a minimal packet from beacon data
-            val packet = SosPacket(
-                sosId = beacon.sosId,
-                deviceId = "unknown", // Will be filled from GATT
-                latitude = 0.0,       // Will be filled from GATT
-                longitude = 0.0,      // Will be filled from GATT
-                emergencyType = beacon.emergencyType,
-                hopCount = beacon.hopCount,
-                ttl = beacon.ttl,
-                status = DeliveryStatus.RELAYED,
-                isOwnPacket = false
-            )
-            
-            // Save to database
-            app.sosRepository.saveIfNotExists(packet)
-            
-            // Add to GATT server for other devices
-            gattServer.addPacket(packet)
-            
-            // Relay the beacon with incremented hop count
-            if (beacon.shouldRelay()) {
-                val relayPacket = packet.forRelay()
-                bleMeshManager.advertiseBeacon(relayPacket, hasInternet, nodeRole == NodeRole.RESPONDER)
-            }
-            
-            // Upload if we have internet
-            if (hasInternet) {
-                app.sosRepository.uploadPacket(packet)
+            try {
+                // Check if already in local DB
+                if (app.sosRepository.exists(beacon.sosId)) {
+                    Log.d(TAG, "Beacon already in database, ignoring")
+                    return@launch
+                }
+                
+                // Check TTL
+                if (beacon.ttl <= 0) {
+                    Log.d(TAG, "Beacon TTL expired, not relaying")
+                    return@launch
+                }
+                
+                // TODO: Connect via GATT to fetch full packet
+                // For now, create a minimal packet from beacon data
+                val packet = SosPacket(
+                    sosId = beacon.sosId,
+                    deviceId = "unknown", // Will be filled from GATT
+                    latitude = 0.0,       // Will be filled from GATT
+                    longitude = 0.0,      // Will be filled from GATT
+                    emergencyType = beacon.emergencyType,
+                    hopCount = beacon.hopCount,
+                    ttl = beacon.ttl,
+                    status = DeliveryStatus.RELAYED,
+                    isOwnPacket = false
+                )
+                
+                // Save to database (only if not exists)
+                val wasInserted = app.sosRepository.saveIfNotExists(packet)
+                if (!wasInserted) {
+                    Log.d(TAG, "Beacon ${beacon.sosId} was already in database (race condition avoided)")
+                    return@launch
+                }
+                
+                Log.d(TAG, "Saved new SOS packet: ${beacon.sosId}")
+                
+                // Add to GATT server for other devices
+                gattServer.addPacket(packet)
+                
+                // Relay the beacon with incremented hop count
+                if (beacon.shouldRelay()) {
+                    val relayPacket = packet.forRelay()
+                    bleMeshManager.advertiseBeacon(relayPacket, hasInternet, nodeRole == NodeRole.RESPONDER)
+                }
+                
+                // Upload if we have internet
+                if (hasInternet) {
+                    app.sosRepository.uploadPacket(packet)
+                }
+            } finally {
+                // Always remove from processing set when done
+                processingBeacons.remove(beacon.sosId)
             }
         }
     }

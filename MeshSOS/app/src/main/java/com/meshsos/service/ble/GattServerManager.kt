@@ -49,18 +49,28 @@ class GattServerManager(private val context: Context) {
             offset: Int,
             characteristic: BluetoothGattCharacteristic
         ) {
-            if (characteristic.uuid == SosBeaconCodec.PACKET_CHARACTERISTIC_UUID) {
+                if (characteristic.uuid == SosBeaconCodec.PACKET_CHARACTERISTIC_UUID) {
                 val packet = currentPacket
                 if (packet != null) {
                     try {
-                        // Convert to minimal JSON
-                        val minimalPacket = packet.toMinimal()
-                        val json = minimalPacket.toJson()
-                        val data = json.toByteArray(Charsets.UTF_8)
+                        // Encode as binary format (~70% smaller than JSON)
+                        val data = BinaryPacketCodec.encode(packet)
+                        
+                        if (data == null) {
+                            Log.e(TAG, "Failed to encode packet as binary")
+                            gattServer?.sendResponse(
+                                device,
+                                requestId,
+                                BluetoothGatt.GATT_FAILURE,
+                                offset,
+                                null
+                            )
+                            return
+                        }
                         
                         // Check size limit
                         if (data.size > MAX_PACKET_SIZE) {
-                            Log.w(TAG, "Packet too large: ${data.size} bytes, truncating")
+                            Log.w(TAG, "Packet too large: ${data.size} bytes")
                             gattServer?.sendResponse(
                                 device,
                                 requestId,
@@ -86,7 +96,7 @@ class GattServerManager(private val context: Context) {
                             responseData
                         )
                         
-                        Log.d(TAG, "Sent packet data to ${device.address}: ${data.size} bytes")
+                        Log.d(TAG, "Sent binary packet data to ${device.address}: ${data.size} bytes")
                     } catch (e: Exception) {
                         Log.e(TAG, "Error sending packet data", e)
                         gattServer?.sendResponse(

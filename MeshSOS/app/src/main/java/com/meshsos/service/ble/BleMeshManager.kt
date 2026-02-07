@@ -9,7 +9,6 @@ import android.os.Looper
 import android.os.ParcelUuid
 import android.util.Log
 import com.meshsos.data.model.EmergencyType
-import com.meshsos.data.model.SosBeacon
 import com.meshsos.data.model.SosPacket
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 @SuppressLint("MissingPermission")
 class BleMeshManager(
     private val context: Context,
-    private val onBeaconReceived: (SosBeacon, String) -> Unit
+    private val onBeaconReceived: (DecodedBeacon, String) -> Unit
 ) {
     
     companion object {
@@ -83,25 +82,6 @@ class BleMeshManager(
     // Low power mode flag
     private var lowPowerMode = false
     
-    // GATT server for exposing full packet data
-    private val gattServer = GattServerManager(context)
-    
-    // GATT client for fetching full packet data from other devices
-    private val gattClient = GattClientManager(context) { packet, deviceAddress ->
-        // Handle full packet received from GATT connection
-        Log.d(TAG, "📦 Received full packet via GATT from $deviceAddress: ${packet.sosId}")
-        // Convert to beacon format and process
-        val beacon = SosBeaconCodec.createBeacon(
-            sosId = packet.sosId,
-            emergencyType = packet.emergencyType,
-            hopCount = packet.hopCount,
-            ttl = packet.ttl,
-            hasInternet = false,
-            isResponder = false
-        )
-        onBeaconReceived(beacon, deviceAddress)
-    }
-    
     // Track device last-seen timestamps for timeout-based cleanup
     private val nearbyDeviceTimestamps = ConcurrentHashMap<String, Long>()
     private var deviceCleanupRunnable: Runnable? = null
@@ -122,23 +102,12 @@ class BleMeshManager(
             return
         }
         
-        val beacon = SosBeaconCodec.createBeacon(
-            sosId = packet.sosId,
-            emergencyType = packet.emergencyType,
-            hopCount = packet.hopCount,
-            ttl = packet.ttl,
-            hasInternet = hasInternet,
-            isResponder = isResponder
-        )
-        
-        val beaconData = SosBeaconCodec.encode(beacon)
-        
-        // Start GATT server to serve full packet data
-        gattServer.start(packet)
+        // Encode packet directly (includes GPS coordinates)
+        val beaconData = SosBeaconCodec.encode(packet, hasInternet, isResponder)
         
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-            .setConnectable(true) // Allow GATT connections
+            .setConnectable(false) // No GATT connections needed
             .setTimeout(ADVERTISE_DURATION_MS)
             .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
             .build()
@@ -188,11 +157,6 @@ class BleMeshManager(
     fun stopAdvertisingBeacon(sosId: UUID) {
         activeAdvertisements.remove(sosId)
         _isAdvertising.value = activeAdvertisements.isNotEmpty()
-        
-        // Stop GATT server if no more advertisements
-        if (activeAdvertisements.isEmpty()) {
-            gattServer.stop()
-        }
     }
     
     /**
@@ -201,7 +165,6 @@ class BleMeshManager(
     fun stopAllAdvertising() {
         activeAdvertisements.clear()
         _isAdvertising.value = false
-        gattServer.stop()
     }
     
     // ============ Presence Advertising ============
@@ -303,15 +266,9 @@ class BleMeshManager(
                 // Clean old entries
                 cleanupBeaconCache()
                 
-                // Notify listener
-                Log.d(TAG, "Received SOS beacon: ${beacon.sosId}, hop=${beacon.hopCount}")
+                // Notify listener with full beacon data (includes GPS coordinates)
+                Log.d(TAG, "Received SOS beacon: ${beacon.sosId}, hop=${beacon.hopCount}, lat=${beacon.latitude}, lon=${beacon.longitude}")
                 onBeaconReceived(beacon, deviceAddress)
-                
-                // If beacon has full packet, try to fetch it via GATT
-                if (beacon.hasFullPacket()) {
-                    Log.d(TAG, "Beacon has full packet, initiating GATT connection to $deviceAddress")
-                    gattClient.fetchPacketFromDevice(deviceAddress, beacon.sosId)
-                }
             }
         }
     }
@@ -493,8 +450,6 @@ class BleMeshManager(
         stopScanning()
         stopAllAdvertising()
         stopPresenceAdvertising()
-        gattServer.stop()
-        gattClient.cleanup()
         nearbyDeviceTimestamps.clear()
         _nearbyDevices.value = emptySet()
         handler.removeCallbacksAndMessages(null)

@@ -70,27 +70,3 @@ data class SosPacket(
         return timestamp < oneHourAgo
     }
 }
-
-/**
- * Lightweight SOS beacon for BLE advertising (25 bytes)
- */
-data class SosBeacon(
-    val sosId: UUID,           // 16 bytes
-    val emergencyType: EmergencyType, // 1 byte
-    val hopCount: Int,         // 1 byte
-    val ttl: Int,              // 1 byte
-    val flags: Int,            // 1 byte (hasInternet, isResponder, etc.)
-    val checksum: Int          // 2 bytes
-) {
-    companion object {
-        const val FLAG_HAS_INTERNET = 0x01
-        const val FLAG_IS_RESPONDER = 0x02
-        const val FLAG_HAS_FULL_PACKET = 0x04
-        
-        const val BEACON_SIZE = 22 // Actual encoded size
-    }
-    
-    fun hasInternet(): Boolean = (flags and FLAG_HAS_INTERNET) != 0
-    fun isResponder(): Boolean = (flags and FLAG_IS_RESPONDER) != 0
-    fun hasFullPacket(): Boolean = (flags and FLAG_HAS_FULL_PACKET) != 0
-}

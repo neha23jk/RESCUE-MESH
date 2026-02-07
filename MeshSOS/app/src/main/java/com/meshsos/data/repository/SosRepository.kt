@@ -46,6 +46,34 @@ class SosRepository(
     }
     
     /**
+     * Update an existing packet if the new data is more complete
+     * (e.g., has valid location, deviceId, etc.)
+     */
+    suspend fun updatePacketIfBetter(newPacket: SosPacket) {
+        val existing = sosPacketDao.getById(newPacket.sosId) ?: return
+        
+        // Check if new packet has better data
+        val hasValidLocation = newPacket.latitude != 0.0 || newPacket.longitude != 0.0
+        val existingHasValidLocation = existing.latitude != 0.0 || existing.longitude != 0.0
+        val hasValidDeviceId = newPacket.deviceId != "unknown"
+        val existingHasValidDeviceId = existing.deviceId != "unknown"
+        
+        // Update if new packet has more complete information
+        if ((hasValidLocation && !existingHasValidLocation) || 
+            (hasValidDeviceId && !existingHasValidDeviceId)) {
+            val updated = existing.copy(
+                latitude = if (hasValidLocation) newPacket.latitude else existing.latitude,
+                longitude = if (hasValidLocation) newPacket.longitude else existing.longitude,
+                accuracy = newPacket.accuracy ?: existing.accuracy,
+                deviceId = if (hasValidDeviceId) newPacket.deviceId else existing.deviceId,
+                optionalMessage = newPacket.optionalMessage ?: existing.optionalMessage,
+                batteryPercentage = newPacket.batteryPercentage ?: existing.batteryPercentage
+            )
+            sosPacketDao.update(updated)
+        }
+    }
+    
+    /**
      * Get all packets as Flow
      */
     fun getAllPackets(): Flow<List<SosPacket>> {

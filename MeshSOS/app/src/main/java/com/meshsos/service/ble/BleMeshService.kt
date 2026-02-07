@@ -21,7 +21,6 @@ import com.meshsos.MeshSOSApplication
 import com.meshsos.R
 import com.meshsos.data.model.DeliveryStatus
 import com.meshsos.data.model.NodeRole
-import com.meshsos.data.model.SosBeacon
 import com.meshsos.data.model.SosPacket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,7 +69,6 @@ class BleMeshService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     
     private lateinit var bleMeshManager: BleMeshManager
-    private lateinit var gattServer: BleGattServer
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var batteryManager: BatteryManager
     
@@ -90,11 +88,13 @@ class BleMeshService : Service() {
         super.onCreate()
         Log.d(TAG, "Service created")
         
-        bleMeshManager = BleMeshManager(this) { beacon, deviceAddress ->
-            handleReceivedBeacon(beacon, deviceAddress)
-        }
+        bleMeshManager = BleMeshManager(
+            context = this,
+            onBeaconReceived = { beacon, deviceAddress ->
+                handleReceivedBeacon(beacon, deviceAddress)
+            }
+        )
         
-        gattServer = BleGattServer(this)
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         batteryManager = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         
@@ -115,7 +115,6 @@ class BleMeshService : Service() {
                     if (latestPacket != null) {
                         Log.d(TAG, "Broadcasting SOS via BLE: ${latestPacket.sosId}")
                         bleMeshManager.addToDeduplicationCache(latestPacket.sosId)
-                        gattServer.addPacket(latestPacket)
                         bleMeshManager.advertiseBeacon(latestPacket, hasInternet, nodeRole == NodeRole.RESPONDER)
                     }
                 }
@@ -143,9 +142,6 @@ class BleMeshService : Service() {
             Log.e(TAG, "Bluetooth not enabled")
             return
         }
-        
-        // Start GATT server for full packet transfer
-        gattServer.start()
         
         // Start scanning for beacons
         bleMeshManager.startScanning()
@@ -186,7 +182,6 @@ class BleMeshService : Service() {
     
     private fun cleanup() {
         bleMeshManager.cleanup()
-        gattServer.stop()
         serviceScope.cancel()
         updateState { ServiceState() }
     }
@@ -204,9 +199,6 @@ class BleMeshService : Service() {
             // Add to deduplication cache
             bleMeshManager.addToDeduplicationCache(packet.sosId)
             
-            // Add to GATT server for clients
-            gattServer.addPacket(packet)
-            
             // Start advertising beacon
             bleMeshManager.advertiseBeacon(packet, hasInternet, nodeRole == NodeRole.RESPONDER)
             
@@ -221,9 +213,9 @@ class BleMeshService : Service() {
     
     // ============ Beacon Handling ============
     
-    private fun handleReceivedBeacon(beacon: SosBeacon, deviceAddress: String) {
+    private fun handleReceivedBeacon(beacon: DecodedBeacon, deviceAddress: String) {
         serviceScope.launch {
-            Log.d(TAG, "Processing beacon: ${beacon.sosId}")
+            Log.d(TAG, "Processing beacon: ${beacon.sosId} at (${beacon.latitude}, ${beacon.longitude})")
             
             // Prevent duplicate processing of the same beacon
             if (!processingBeacons.add(beacon.sosId)) {
@@ -244,16 +236,16 @@ class BleMeshService : Service() {
                     return@launch
                 }
                 
-                // TODO: Connect via GATT to fetch full packet
-                // For now, create a minimal packet from beacon data
+                // Create packet from beacon data (now includes real GPS coordinates!)
                 val packet = SosPacket(
                     sosId = beacon.sosId,
-                    deviceId = "unknown", // Will be filled from GATT
-                    latitude = 0.0,       // Will be filled from GATT
-                    longitude = 0.0,      // Will be filled from GATT
+                    deviceId = beacon.getDeviceIdString(), // From beacon device ID hash
+                    latitude = beacon.latitude,            // Real GPS data!
+                    longitude = beacon.longitude,          // Real GPS data!
                     emergencyType = beacon.emergencyType,
                     hopCount = beacon.hopCount,
                     ttl = beacon.ttl,
+                    batteryPercentage = beacon.batteryPercentage, // From beacon!
                     status = DeliveryStatus.RELAYED,
                     isOwnPacket = false
                 )
@@ -265,10 +257,7 @@ class BleMeshService : Service() {
                     return@launch
                 }
                 
-                Log.d(TAG, "Saved new SOS packet: ${beacon.sosId}")
-                
-                // Add to GATT server for other devices
-                gattServer.addPacket(packet)
+                Log.d(TAG, "✅ Saved SOS packet: ${beacon.sosId} at (${packet.latitude}, ${packet.longitude})")
                 
                 // Relay the beacon with incremented hop count
                 if (beacon.shouldRelay()) {
@@ -276,8 +265,9 @@ class BleMeshService : Service() {
                     bleMeshManager.advertiseBeacon(relayPacket, hasInternet, nodeRole == NodeRole.RESPONDER)
                 }
                 
-                // Upload if we have internet
+                // Upload if we have internet - now with real GPS data!
                 if (hasInternet) {
+                    Log.d(TAG, "📤 Uploading packet to backend with GPS: (${packet.latitude}, ${packet.longitude})")
                     app.sosRepository.uploadPacket(packet)
                 }
             } finally {
@@ -286,8 +276,6 @@ class BleMeshService : Service() {
             }
         }
     }
-    
-    private fun SosBeacon.shouldRelay(): Boolean = ttl > 1
     
     // ============ Connectivity ============
     

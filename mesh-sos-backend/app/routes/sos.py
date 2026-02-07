@@ -1,5 +1,5 @@
 """
-SOS packet API routes
+SOS packet API routes - Clean implementation without API key requirements
 """
 from datetime import datetime, timedelta
 from typing import Optional
@@ -20,7 +20,6 @@ from ..models import (
     DeliveryStatus,
     EmergencyType
 )
-from ..auth import verify_api_key
 
 router = APIRouter(prefix="/api/v1", tags=["SOS"])
 

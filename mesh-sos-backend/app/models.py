@@ -109,18 +109,25 @@ class SosPacketResponse(BaseModel):
     timestamp: datetime
     latitude: float
     longitude: float
-    accuracy: Optional[float]
+    accuracy: Optional[float] = None
     emergency_type: EmergencyType
-    optional_message: Optional[str]
-    battery_percentage: Optional[int]
+    optional_message: Optional[str] = None
+    battery_percentage: Optional[int] = None
     hop_count: int
     ttl: int
     status: DeliveryStatus
     received_at: datetime
-    responded_at: Optional[datetime]
+    responded_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True,
+        "json_encoders": {},
+    }
+    
+    def model_dump(self, **kwargs):
+        """Override to exclude None values by default"""
+        kwargs.setdefault('exclude_none', True)
+        return super().model_dump(**kwargs)
 
 
 class MarkRespondedRequest(BaseModel):

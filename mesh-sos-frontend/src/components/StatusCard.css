@@ -1,0 +1,38 @@
+.status-card {
+    background-color: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    border: 1px solid var(--surface-variant);
+    transition: all 0.2s ease;
+}
+
+.status-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(229, 9, 20, 0.3);
+}
+
+.status-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-card-content {
+    flex: 1;
+}
+
+.status-card-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-card-value {
+    font-size: 28px;
+    font-weight: 700;
+}

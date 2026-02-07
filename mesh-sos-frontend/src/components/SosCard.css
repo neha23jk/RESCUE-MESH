@@ -1,0 +1,77 @@
+.sos-card {
+    background-color: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--surface-variant);
+    transition: all 0.3s ease;
+}
+
+.sos-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary);
+}
+
+.sos-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.emergency-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sos-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.sos-message {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background-color: var(--surface-variant);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--primary);
+}
+
+.sos-message p {
+    color: var(--text-primary);
+    font-style: italic;
+    margin: 0;
+}
+
+.sos-card-footer {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--surface-variant);
+}
+
+.btn-sm {
+    font-size: 13px;
+    padding: 6px 12px;
+}

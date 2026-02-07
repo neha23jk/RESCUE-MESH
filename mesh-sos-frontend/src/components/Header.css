@@ -1,0 +1,121 @@
+.header {
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--surface-variant);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.logo-text {
+    color: var(--text-primary);
+}
+
+.logo-accent {
+    color: var(--primary);
+}
+
+.nav {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    background-color: var(--surface-variant);
+    color: var(--text-primary);
+}
+
+.nav-link.active {
+    background-color: rgba(229, 9, 20, 0.1);
+    color: var(--primary);
+}
+
+.header-stats {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-xs) var(--spacing-md);
+    background-color: var(--surface-variant);
+    border-radius: var(--radius-md);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-value.active {
+    color: var(--primary);
+}
+
+.stat-divider {
+    width: 1px;
+    height: 30px;
+    background-color: var(--surface-variant);
+}
+
+@media (max-width: 768px) {
+    .nav span {
+        display: none;
+    }
+
+    .header-stats {
+        padding: var(--spacing-xs);
+    }
+
+    .stat-label {
+        font-size: 9px;
+    }
+
+    .stat-value {
+        font-size: 14px;
+    }
+}

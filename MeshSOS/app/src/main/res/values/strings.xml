@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">MeshSOS</string>
+    <string name="sos_button_text">SEND SOS</string>
+    <string name="sos_button_content_description">Send emergency SOS signal</string>
+    <string name="mesh_status_active">Mesh Active</string>
+    <string name="mesh_status_inactive">Mesh Inactive</string>
+    <string name="internet_connected">Online</string>
+    <string name="internet_disconnected">Offline</string>
+    <string name="location_locked">GPS Locked</string>
+    <string name="location_searching">Searching GPS...</string>
+    <string name="nearby_nodes">Nearby: %d nodes</string>
+    <string name="notification_channel_name">MeshSOS Service</string>
+    <string name="notification_title">MeshSOS Active</string>
+    <string name="notification_text">Mesh network is running</string>
+</resources>

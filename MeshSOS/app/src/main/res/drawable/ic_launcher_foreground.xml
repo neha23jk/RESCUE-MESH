@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- SOS Circle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,24c-16.569,0 -30,13.431 -30,30s13.431,30 30,30s30,-13.431 30,-30s-13.431,-30 -30,-30M54,78c-13.255,0 -24,-10.745 -24,-24s10.745,-24 24,-24s24,10.745 24,24s-10.745,24 -24,24"/>
+    <!-- S letter -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,48c0,-3.314 2.686,-6 6,-6h4c3.314,0 6,2.686 6,6v2c0,3.314 -2.686,6 -6,6h-4c-3.314,0 -6,2.686 -6,6v2c0,3.314 2.686,6 6,6h4c3.314,0 6,-2.686 6,-6"/>
+    <!-- O letter -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,42c5.523,0 10,4.477 10,10v8c0,5.523 -4.477,10 -10,10s-10,-4.477 -10,-10v-8c0,-5.523 4.477,-10 10,-10M54,46c-3.314,0 -6,2.686 -6,6v8c0,3.314 2.686,6 6,6s6,-2.686 6,-6v-8c0,-3.314 -2.686,-6 -6,-6"/>
+    <!-- S letter (right) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M64,48c0,-3.314 2.686,-6 6,-6h4c3.314,0 6,2.686 6,6v2c0,3.314 -2.686,6 -6,6h-4c-3.314,0 -6,2.686 -6,6v2c0,3.314 2.686,6 6,6h4c3.314,0 6,-2.686 6,-6"/>
+</vector>

@@ -2,17 +2,21 @@
 MeshSOS Backend - FastAPI Application Entry Point
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import logging
 
 from .config import get_settings
 from .database import init_db
 from .routes import sos
 
 settings = get_settings()
+logger = logging.getLogger("uvicorn")
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -37,6 +41,17 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# Custom validation exception handler
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Validation error for {request.method} {request.url.path}")
+    logger.error(f"Body: {await request.body()}")
+    logger.error(f"Errors: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": str(await request.body())},
+    )
 
 # Add rate limiter
 app.state.limiter = limiter

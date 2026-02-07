@@ -36,6 +36,10 @@ async def upload_sos(
     This endpoint receives SOS packets that have been collected by the mesh
     network and uploads them to the central server for responder access.
     """
+    import logging
+    logger = logging.getLogger("uvicorn")
+    logger.info(f"Received SOS packet: {packet.model_dump()}")
+    
     # Check if packet already exists (deduplication)
     existing = db.query(SosPacketDB).filter(SosPacketDB.sos_id == packet.sos_id).first()
     
@@ -76,6 +80,8 @@ async def upload_sos(
     db.add(db_packet)
     db.commit()
     db.refresh(db_packet)
+    
+    logger.info(f"SOS packet saved successfully: {packet.sos_id}")
     
     return UploadResponse(
         success=True,
@@ -169,8 +175,7 @@ async def mark_responded(
 @router.get("/sos/{sos_id}", response_model=SosPacketResponse)
 async def get_sos_by_id(
     sos_id: UUID,
-    db: Session = Depends(get_db),
-    _: str = Depends(verify_api_key)
+    db: Session = Depends(get_db)
 ):
     """
     Get a specific SOS packet by ID.

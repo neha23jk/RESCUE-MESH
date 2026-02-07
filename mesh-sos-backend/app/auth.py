@@ -7,7 +7,7 @@ from .config import get_settings
 settings = get_settings()
 
 
-async def verify_api_key(x_api_key: str = Header(..., alias="X-API-Key")):
+async def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
     """
     Verify API key from request header.
     
@@ -17,9 +17,11 @@ async def verify_api_key(x_api_key: str = Header(..., alias="X-API-Key")):
     Raises:
         HTTPException: If API key is invalid
     """
-    if x_api_key != settings.api_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API key"
-        )
+    # For now, we are allowing public access for the dashboard
+    # If we want to enforce it later, we can uncomment this
+    # if x_api_key != settings.api_key:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_401_UNAUTHORIZED,
+    #         detail="Invalid API key"
+    #     )
     return x_api_key

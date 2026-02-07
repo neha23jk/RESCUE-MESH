@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import Column, String, Float, Integer, DateTime, Enum as SQLEnum, Text, Boolean
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
@@ -17,19 +17,19 @@ from .database import Base
 
 class EmergencyType(str, Enum):
     """Type of emergency"""
-    MEDICAL = "medical"
-    FIRE = "fire"
-    FLOOD = "flood"
-    EARTHQUAKE = "earthquake"
-    GENERAL = "general"
+    MEDICAL = "MEDICAL"
+    FIRE = "FIRE"
+    FLOOD = "FLOOD"
+    EARTHQUAKE = "EARTHQUAKE"
+    GENERAL = "GENERAL"
 
 
 class DeliveryStatus(str, Enum):
     """Delivery status of SOS packet"""
-    PENDING = "pending"
-    RELAYED = "relayed"
-    DELIVERED = "delivered"
-    RESPONDED = "responded"
+    PENDING = "PENDING"
+    RELAYED = "RELAYED"
+    DELIVERED = "DELIVERED"
+    RESPONDED = "RESPONDED"
 
 
 # ============ SQLAlchemy Models ============
@@ -92,6 +92,14 @@ class SosPacketCreate(BaseModel):
     hop_count: int = Field(0, ge=0, le=100)
     ttl: int = Field(10, ge=0, le=100)
     signature: Optional[str] = Field(None, max_length=128)
+    
+    @field_validator('emergency_type', mode='before')
+    @classmethod
+    def validate_emergency_type(cls, v):
+        """Accept both uppercase and lowercase emergency types"""
+        if isinstance(v, str):
+            return v.upper()
+        return v
 
 
 class SosPacketResponse(BaseModel):
@@ -106,6 +114,7 @@ class SosPacketResponse(BaseModel):
     optional_message: Optional[str]
     battery_percentage: Optional[int]
     hop_count: int
+    ttl: int
     status: DeliveryStatus
     received_at: datetime
     responded_at: Optional[datetime]

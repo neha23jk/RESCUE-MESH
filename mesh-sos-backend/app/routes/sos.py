@@ -28,8 +28,7 @@ router = APIRouter(prefix="/api/v1", tags=["SOS"])
 @router.post("/upload-sos", response_model=UploadResponse)
 async def upload_sos(
     packet: SosPacketCreate,
-    db: Session = Depends(get_db),
-    _: str = Depends(verify_api_key)
+    db: Session = Depends(get_db)
 ):
     """
     Upload an SOS packet from a mesh node with internet connectivity.
@@ -88,7 +87,6 @@ async def upload_sos(
 @router.get("/active-sos", response_model=ActiveSosResponse)
 async def get_active_sos(
     db: Session = Depends(get_db),
-    _: str = Depends(verify_api_key),
     emergency_type: Optional[EmergencyType] = Query(None, description="Filter by emergency type"),
     hours: int = Query(24, ge=1, le=168, description="Get SOS from last N hours"),
     limit: int = Query(100, ge=1, le=500, description="Maximum number of results")
@@ -131,8 +129,7 @@ async def get_active_sos(
 @router.post("/mark-responded", response_model=UploadResponse)
 async def mark_responded(
     request: MarkRespondedRequest,
-    db: Session = Depends(get_db),
-    _: str = Depends(verify_api_key)
+    db: Session = Depends(get_db)
 ):
     """
     Mark an SOS packet as responded.

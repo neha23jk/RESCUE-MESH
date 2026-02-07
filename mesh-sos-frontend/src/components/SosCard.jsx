@@ -25,7 +25,9 @@ export default function SosCard({ sos, onUpdate }) {
     const statusColor = statusColors[sos.status] || 'var(--text-secondary)';
 
     const formatDate = (timestamp) => {
-        const date = new Date(timestamp);
+        // Add 'Z' to indicate UTC if not present (backend sends without timezone)
+        const utcTimestamp = timestamp.endsWith('Z') ? timestamp : timestamp + 'Z';
+        const date = new Date(utcTimestamp);
         return date.toLocaleString();
     };
 

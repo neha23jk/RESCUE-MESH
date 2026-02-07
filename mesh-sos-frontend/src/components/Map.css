@@ -1,0 +1,120 @@
+.map-wrapper {
+    height: 400px;
+    width: 100%;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+    /* Ensure map is below any modals/overlays */
+}
+
+.leaflet-map {
+    height: 100%;
+    width: 100%;
+}
+
+/* Custom Marker Icon (remove default box) */
+.custom-marker-icon {
+    background: transparent;
+    border: none;
+}
+
+/* Custom Popup Styles */
+.sos-popup .leaflet-popup-content-wrapper {
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: 0;
+    overflow: hidden;
+}
+
+.sos-popup .leaflet-popup-content {
+    margin: 0;
+    width: 200px !important;
+}
+
+.popup-content {
+    font-family: var(--font-primary);
+}
+
+.popup-header {
+    background-color: var(--bg-secondary);
+    padding: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.popup-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-full);
+    text-transform: capitalize;
+}
+
+.popup-badge.type-fire {
+    background-color: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+}
+
+.popup-badge.type-medical {
+    background-color: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+}
+
+.popup-badge.type-flood {
+    background-color: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9;
+}
+
+.popup-badge.type-earthquake {
+    background-color: rgba(217, 119, 6, 0.1);
+    color: #d97706;
+}
+
+.popup-badge.type-general {
+    background-color: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+.popup-time {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.popup-details {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+
+.popup-details p {
+    margin: 0 0 0.5rem 0;
+}
+
+.popup-metrics {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.popup-metrics span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.popup-coords {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 0.5rem;
+}

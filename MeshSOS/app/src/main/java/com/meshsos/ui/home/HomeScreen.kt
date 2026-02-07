@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.meshsos.data.model.EmergencyType
 import com.meshsos.data.model.NodeRole
+import com.meshsos.data.remote.ApiClient
+import com.meshsos.data.remote.ApiSettings
 import com.meshsos.ui.theme.*
 
 /**
@@ -45,6 +47,7 @@ fun HomeScreen(
     val haptic = LocalHapticFeedback.current
     
     var showEmergencyTypeDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     
     Scaffold(
         containerColor = Background,
@@ -54,7 +57,15 @@ fun HomeScreen(
                     Text(
                         "MeshSOS",
                         fontWeight = FontWeight.Bold,
-                        color = Primary
+                        color = Primary,
+                        modifier = Modifier.pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showSettingsDialog = true
+                                }
+                            )
+                        }
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -142,6 +153,12 @@ fun HomeScreen(
                 showEmergencyTypeDialog = false
                 viewModel.sendSos(type, message)
             }
+        )
+    }
+    
+    if (showSettingsDialog) {
+        ServerSettingsDialog(
+            onDismiss = { showSettingsDialog = false }
         )
     }
 }
@@ -525,4 +542,135 @@ fun EmergencyTypeDialog(
     )
 }
 
-
+/**
+ * Hidden Settings Dialog for configuring server IP address
+ */
+@Composable
+fun ServerSettingsDialog(
+    onDismiss: () -> Unit
+) {
+    var customUrl by remember { mutableStateOf(ApiSettings.getCustomUrl()) }
+    var useCustomUrl by remember { mutableStateOf(ApiSettings.isUsingCustomUrl()) }
+    val defaultUrl = ApiSettings.getDefaultUrl()
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Surface,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = Primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Server Settings", color = TextPrimary)
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    "Configure backend server connection",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                // Default URL display
+                Text(
+                    "Default Server:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary
+                )
+                Text(
+                    defaultUrl,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextDisabled,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                // Custom URL toggle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Use Custom Server",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary
+                    )
+                    Switch(
+                        checked = useCustomUrl,
+                        onCheckedChange = { useCustomUrl = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Primary,
+                            checkedTrackColor = Primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                
+                // Custom URL input
+                if (useCustomUrl) {
+                    OutlinedTextField(
+                        value = customUrl,
+                        onValueChange = { customUrl = it },
+                        label = { Text("Server URL") },
+                        placeholder = { Text("http://192.168.1.100:8000") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Cloud,
+                                contentDescription = "Server",
+                                tint = TextSecondary
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Primary,
+                            unfocusedBorderColor = TextSecondary,
+                            focusedLabelColor = Primary,
+                            unfocusedLabelColor = TextSecondary,
+                            cursorColor = Primary,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        )
+                    )
+                    
+                    Text(
+                        "Enter the full URL including port (e.g., http://IP:8000)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (useCustomUrl && customUrl.isNotBlank()) {
+                        ApiSettings.setCustomUrl(customUrl)
+                    } else {
+                        ApiSettings.useDefaultUrl()
+                    }
+                    ApiClient.refresh()
+                    onDismiss()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+            ) {
+                Text("Save", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = TextSecondary)
+            }
+        }
+    )
+}

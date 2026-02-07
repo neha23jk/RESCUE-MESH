@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import com.meshsos.data.local.MeshSOSDatabase
+import com.meshsos.data.remote.ApiSettings
 import com.meshsos.data.repository.SosRepository
 
 /**
@@ -27,6 +28,7 @@ class MeshSOSApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        ApiSettings.init(this)
         createNotificationChannels()
     }
     

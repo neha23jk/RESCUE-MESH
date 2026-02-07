@@ -3,16 +3,14 @@ Database configuration and session management
 """
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from .config import get_settings
 
-settings = get_settings()
+# SQLite database for simplicity
+DATABASE_URL = "sqlite:///./meshsos.db"
 
 # Create SQLAlchemy engine
 engine = create_engine(
-    settings.database_url,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20
+    DATABASE_URL,
+    connect_args={"check_same_thread": False}  # Required for SQLite
 )
 
 # Session factory

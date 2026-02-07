@@ -1,8 +1,8 @@
-// Dashboard Page - Main view with stats and active SOS list
 import { useState, useEffect } from 'react';
 import { AlertCircle, Activity, Users, CheckCircle } from 'lucide-react';
 import StatusCard from '../components/StatusCard';
 import SosCard from '../components/SosCard';
+import Map from '../components/Map';
 import { sosAPI } from '../api/client';
 import './Dashboard.css';
 
@@ -88,6 +88,12 @@ export default function Dashboard() {
                     color="var(--status-online)"
                 />
             </div>
+
+            {/* Interactive Map */}
+            <div className="section-header">
+                <h2>Live Map</h2>
+            </div>
+            <Map activeSOS={activeSOS} />
 
             <div className="active-sos-section">
                 <div className="section-header">

@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Retrofit client singleton for API communication
+ * Supports dynamic URL switching via ApiSettings
  */
 object ApiClient {
     
@@ -29,13 +30,42 @@ object ApiClient {
         .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .build()
     
-    private val retrofit = Retrofit.Builder()
-        .baseUrl(BuildConfig.API_BASE_URL + "/")
-        .client(okHttpClient)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
+    @Volatile
+    private var currentBaseUrl: String = ""
     
-    val api: MeshSOSApi = retrofit.create(MeshSOSApi::class.java)
+    @Volatile
+    private var _api: MeshSOSApi? = null
+    
+    /**
+     * Get the API instance, rebuilding if URL has changed
+     */
+    val api: MeshSOSApi
+        get() {
+            val newBaseUrl = ApiSettings.getBaseUrl()
+            if (_api == null || currentBaseUrl != newBaseUrl) {
+                synchronized(this) {
+                    if (_api == null || currentBaseUrl != newBaseUrl) {
+                        currentBaseUrl = newBaseUrl
+                        val retrofit = Retrofit.Builder()
+                            .baseUrl(newBaseUrl + "/")
+                            .client(okHttpClient)
+                            .addConverterFactory(GsonConverterFactory.create())
+                            .build()
+                        _api = retrofit.create(MeshSOSApi::class.java)
+                    }
+                }
+            }
+            return _api!!
+        }
     
     val apiKey: String = BuildConfig.API_KEY
+    
+    /**
+     * Force rebuild of API client (call after URL change)
+     */
+    fun refresh() {
+        synchronized(this) {
+            _api = null
+        }
+    }
 }

@@ -38,8 +38,8 @@ class SosPacketDB(Base):
     """SQLAlchemy model for SOS packets in database"""
     __tablename__ = "sos_packets"
     
-    # Primary key
-    sos_id = Column(PGUUID(as_uuid=True), primary_key=True)
+    # Primary key - using String for SQLite compatibility
+    sos_id = Column(String(36), primary_key=True)
     
     # Device info (hashed for privacy)
     device_id = Column(String(64), nullable=False, index=True)

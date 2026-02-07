@@ -48,12 +48,12 @@ async def upload_sos(
             message="SOS packet already exists in database"
         )
     
-    # Validate timestamp (prevent replay attacks - max 1 hour old)
-    max_age = timedelta(hours=1)
+    # Validate timestamp (prevent replay attacks - max 24 hours for disaster scenarios)
+    max_age = timedelta(hours=24)
     if datetime.utcnow() - packet.timestamp > max_age:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="SOS packet timestamp too old (>1 hour)"
+            detail="SOS packet timestamp too old (>24 hours)"
         )
     
     # Create new packet record

@@ -9,17 +9,16 @@ import java.util.UUID
 /**
  * Encodes and decodes SOS beacons for BLE advertising
  * 
- * Beacon Structure (22 bytes):
- * - UUID (16 bytes): SOS ID for deduplication
+ * Beacon Structure (8 bytes - compact for BLE limits):
+ * - UUID Prefix (4 bytes): First 4 bytes of SOS ID for deduplication
  * - Emergency Type (1 byte): Type of emergency
  * - Hop Count (1 byte): Number of hops so far
  * - TTL (1 byte): Time-to-live for relay limiting
  * - Flags (1 byte): Bit flags for device state
- * - Checksum (2 bytes): CRC-16 for integrity
  */
 object SosBeaconCodec {
     
-    const val BEACON_SIZE = 22
+    const val BEACON_SIZE = 8
     
     // MeshSOS service UUID for BLE
     val SERVICE_UUID: UUID = UUID.fromString("0000FE50-0000-1000-8000-00805F9B34FB")
@@ -28,15 +27,14 @@ object SosBeaconCodec {
     val PACKET_CHARACTERISTIC_UUID: UUID = UUID.fromString("0000FE51-0000-1000-8000-00805F9B34FB")
     
     /**
-     * Encode SOS beacon to byte array for BLE advertising
+     * Encode SOS beacon to byte array for BLE advertising (compact 8 bytes)
      */
     fun encode(beacon: SosBeacon): ByteArray {
         val buffer = ByteBuffer.allocate(BEACON_SIZE)
-        buffer.order(ByteOrder.LITTLE_ENDIAN)
+        buffer.order(ByteOrder.BIG_ENDIAN)
         
-        // UUID (16 bytes)
-        buffer.putLong(beacon.sosId.mostSignificantBits)
-        buffer.putLong(beacon.sosId.leastSignificantBits)
+        // UUID prefix - first 4 bytes only (sufficient for local deduplication)
+        buffer.putInt((beacon.sosId.mostSignificantBits shr 32).toInt())
         
         // Emergency type (1 byte)
         buffer.put(beacon.emergencyType.ordinal.toByte())
@@ -50,18 +48,11 @@ object SosBeaconCodec {
         // Flags (1 byte)
         buffer.put(beacon.flags.toByte())
         
-        // Calculate checksum over first 20 bytes
-        val data = buffer.array()
-        val checksum = calculateCRC16(data, 0, 20)
-        
-        // Checksum (2 bytes)
-        buffer.putShort(checksum.toShort())
-        
         return buffer.array()
     }
     
     /**
-     * Decode byte array from BLE advertising to SOS beacon
+     * Decode byte array from BLE advertising to SOS beacon (compact format)
      * Returns null if invalid
      */
     fun decode(data: ByteArray): SosBeacon? {
@@ -70,13 +61,12 @@ object SosBeaconCodec {
         }
         
         val buffer = ByteBuffer.wrap(data)
-        buffer.order(ByteOrder.LITTLE_ENDIAN)
+        buffer.order(ByteOrder.BIG_ENDIAN)
         
         try {
-            // UUID (16 bytes)
-            val msb = buffer.long
-            val lsb = buffer.long
-            val sosId = UUID(msb, lsb)
+            // UUID prefix (4 bytes) - reconstruct partial UUID
+            val uuidPrefix = buffer.int.toLong() and 0xFFFFFFFFL
+            val sosId = UUID(uuidPrefix shl 32, 0L)
             
             // Emergency type (1 byte)
             val emergencyTypeOrdinal = buffer.get().toInt() and 0xFF
@@ -92,22 +82,13 @@ object SosBeaconCodec {
             // Flags (1 byte)
             val flags = buffer.get().toInt() and 0xFF
             
-            // Checksum (2 bytes)
-            val receivedChecksum = buffer.short.toInt() and 0xFFFF
-            
-            // Verify checksum
-            val calculatedChecksum = calculateCRC16(data, 0, 20)
-            if (receivedChecksum != calculatedChecksum) {
-                return null
-            }
-            
             return SosBeacon(
                 sosId = sosId,
                 emergencyType = emergencyType,
                 hopCount = hopCount,
                 ttl = ttl,
                 flags = flags,
-                checksum = receivedChecksum
+                checksum = 0
             )
         } catch (e: Exception) {
             return null
@@ -129,44 +110,14 @@ object SosBeaconCodec {
         if (hasInternet) flags = flags or SosBeacon.FLAG_HAS_INTERNET
         if (isResponder) flags = flags or SosBeacon.FLAG_IS_RESPONDER
         
-        val beacon = SosBeacon(
+        return SosBeacon(
             sosId = sosId,
             emergencyType = emergencyType,
             hopCount = hopCount,
             ttl = ttl,
             flags = flags,
-            checksum = 0 // Will be calculated during encode
+            checksum = 0
         )
-        
-        // Calculate actual checksum
-        val encoded = encode(beacon)
-        val actualChecksum = ByteBuffer.wrap(encoded, 20, 2)
-            .order(ByteOrder.LITTLE_ENDIAN)
-            .short.toInt() and 0xFFFF
-        
-        return beacon.copy(checksum = actualChecksum)
     }
     
-    /**
-     * CRC-16-CCITT calculation
-     */
-    private fun calculateCRC16(data: ByteArray, offset: Int, length: Int): Int {
-        var crc = 0xFFFF
-        
-        for (i in offset until (offset + length)) {
-            val b = data[i].toInt() and 0xFF
-            crc = crc xor (b shl 8)
-            
-            for (j in 0 until 8) {
-                crc = if ((crc and 0x8000) != 0) {
-                    (crc shl 1) xor 0x1021
-                } else {
-                    crc shl 1
-                }
-                crc = crc and 0xFFFF
-            }
-        }
-        
-        return crc
-    }
 }

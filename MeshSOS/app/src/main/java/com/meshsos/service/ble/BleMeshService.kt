@@ -103,8 +103,18 @@ class BleMeshService : Service() {
             ACTION_START -> startMeshService()
             ACTION_STOP -> stopMeshService()
             ACTION_SEND_SOS -> {
-                // SOS packet would be passed via intent extras
-                // For now, handled via repository
+                // Broadcast the latest own SOS packet via BLE
+                serviceScope.launch {
+                    app.sosRepository.getOwnPackets().collect { packets ->
+                        val latestPacket = packets.firstOrNull()
+                        if (latestPacket != null) {
+                            Log.d(TAG, "Broadcasting SOS via BLE: ${latestPacket.sosId}")
+                            bleMeshManager.addToDeduplicationCache(latestPacket.sosId)
+                            gattServer.addPacket(latestPacket)
+                            bleMeshManager.advertiseBeacon(latestPacket, hasInternet, nodeRole == NodeRole.RESPONDER)
+                        }
+                    }
+                }
             }
         }
         

@@ -110,11 +110,26 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             // Save to database
             app.sosRepository.saveSosPacket(packet)
             
-            // Broadcast via service (will be picked up by foreground service)
-            val intent = Intent(getApplication(), BleMeshService::class.java).apply {
+            // Try to upload immediately if we have internet
+            val uploaded = app.sosRepository.uploadPacket(packet)
+            if (uploaded) {
+                android.util.Log.d("HomeViewModel", "SOS uploaded successfully to backend")
+            } else {
+                android.util.Log.w("HomeViewModel", "SOS upload failed, will retry later")
+            }
+            
+            // Start mesh service if not running
+            val startIntent = Intent(getApplication(), BleMeshService::class.java).apply {
+                action = BleMeshService.ACTION_START
+            }
+            getApplication<Application>().startForegroundService(startIntent)
+            
+            // Broadcast SOS via BLE to nearby devices
+            val sosIntent = Intent(getApplication(), BleMeshService::class.java).apply {
                 action = BleMeshService.ACTION_SEND_SOS
             }
-            getApplication<Application>().startService(intent)
+            getApplication<Application>().startService(sosIntent)
+            android.util.Log.d("HomeViewModel", "Broadcasting SOS via BLE mesh")
             
             _uiState.update { 
                 it.copy(

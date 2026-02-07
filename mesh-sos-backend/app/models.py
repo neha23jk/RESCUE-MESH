@@ -81,7 +81,7 @@ class SosPacketDB(Base):
 class SosPacketCreate(BaseModel):
     """Schema for creating/uploading SOS packet"""
     sos_id: UUID
-    device_id: str = Field(..., min_length=64, max_length=64)
+    device_id: str = Field(..., min_length=1, max_length=128)
     timestamp: datetime
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
@@ -91,7 +91,7 @@ class SosPacketCreate(BaseModel):
     battery_percentage: Optional[int] = Field(None, ge=0, le=100)
     hop_count: int = Field(0, ge=0, le=100)
     ttl: int = Field(10, ge=0, le=100)
-    signature: Optional[str] = Field(None, max_length=64)
+    signature: Optional[str] = Field(None, max_length=128)
 
 
 class SosPacketResponse(BaseModel):

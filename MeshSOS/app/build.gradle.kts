@@ -22,7 +22,7 @@ android {
         }
 
         // Build config for API settings
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000\"")
+        buildConfigField("String", "API_BASE_URL", "\"http://192.168.0.217:8000\"")
         buildConfigField("String", "API_KEY", "\"meshsos-dev-api-key-change-in-production\"")
 
         ksp {
@@ -55,7 +55,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.6"
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     packaging {

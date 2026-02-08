@@ -32,7 +32,7 @@
 - `mesh-sos-frontend/`: React-based web dashboard.
 - `MeshSOS/`: Android application source code.
 
-## 🏁 Getting Started
+##  Getting Started
 
 ### Prerequisites
 - Node.js & npm

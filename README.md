@@ -2,7 +2,7 @@
 
 **MeshSOS** is an Offline Emergency Mesh SOS Network designed to provide reliable communication in disaster scenarios where traditional infrastructure (cellular/Wi-Fi) is unavailable. It enables devices to form a mesh network, relay SOS signals, and upload them to a central server when connectivity is restored.
 
-## 🚀 Features
+##  Features
 
 - **Offline Mesh Networking:** Devices communicate directly with each other to relay emergency signals.
 - **SOS Broadcasting:** Users can broadcast SOS signals with location, emergency type, and optional messages.
@@ -10,7 +10,7 @@
 - **Centralized Dashboard:** A web-based dashboard for responders to visualize emergencies on a map.
 - **Cross-Platform:** Android app for users and a web dashboard for emergency centers.
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Backend
 - **Framework:** FastAPI (Python)
@@ -26,7 +26,7 @@
 - **Language:** Kotlin / Java
 - **Communication:** BLE (Bluetooth Low Energy) / WiFi Direct
 
-## 📂 Project Structure
+##  Project Structure
 
 - `mesh-sos-backend/`: FastAPI backend service.
 - `mesh-sos-frontend/`: React-based web dashboard.
@@ -68,7 +68,7 @@ npm run dev
 ```
 *The dashboard will be available at `http://localhost:5173`.*
 
-## 📱 Android App Connection
+##  Android App Connection
 
 To connect the Android app (running on a physical device or emulator) to the backend:
 
@@ -77,10 +77,10 @@ To connect the Android app (running on a physical device or emulator) to the bac
 3. In the Android app settings, point the API URL to: `http://<YOUR_LOCAL_IP>:8001`.
    - *For Android Emulator, use `http://10.0.2.2:8001`.*
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.
 
-## 📄 License
+##  License
 
 This project is open-source and available under the [MIT License](LICENSE).
